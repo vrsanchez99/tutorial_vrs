@@ -4,6 +4,7 @@ import com.example.tutorial.controller.constant.EndPointUris;
 import com.example.tutorial.model.dto.TutorialDTO;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
 import java.util.Optional;
@@ -27,12 +28,15 @@ public interface TutorialApi {
     @PostMapping
     ResponseEntity< TutorialDTO > create( @RequestBody final TutorialDTO TutorialDTO );
 
-    @PutMapping(EndPointUris.UPDATE)
-    ResponseEntity< TutorialDTO > update( @RequestBody final TutorialDTO TutorialDTO );
+    @PutMapping(EndPointUris.UPDATE+EndPointUris.ID)
+    ResponseEntity< TutorialDTO > update(@PathVariable("id") String id, @RequestBody final TutorialDTO TutorialDTO );
 
     @DeleteMapping( EndPointUris.DELETE+EndPointUris.ID )
     ResponseEntity< Boolean > delete( @PathVariable final String id );
 
     @DeleteMapping(EndPointUris.DELETE+EndPointUris.ALL)
     ResponseEntity<Boolean> deleteAll();
+
+    @GetMapping(EndPointUris.NOTIFICATIONS)
+    public SseEmitter getNewNotification();
 }

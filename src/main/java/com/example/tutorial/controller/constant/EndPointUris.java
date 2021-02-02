@@ -21,4 +21,8 @@ public class EndPointUris {
 
     public static  final String DELETE= "/delete";
 
+    public static final String NOTIFICATIONS = "/new_notification";
+
+
+
 }

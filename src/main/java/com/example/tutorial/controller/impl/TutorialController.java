@@ -4,20 +4,28 @@ import com.example.tutorial.controller.TutorialApi;
 import com.example.tutorial.model.TutorialVO;
 import com.example.tutorial.model.dto.TutorialDTO;
 import com.example.tutorial.repository.TutorialRepository;
+import com.example.tutorial.service.impl.Notification;
 import com.example.tutorial.service.impl.TutorialService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.event.EventListener;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CopyOnWriteArrayList;
 
+@CrossOrigin
 @RestController
 public class TutorialController implements TutorialApi {
 
+    private final CopyOnWriteArrayList<SseEmitter> emitters = new CopyOnWriteArrayList<>();
     @Autowired
     private TutorialService tutorialService;
 
@@ -51,8 +59,8 @@ public class TutorialController implements TutorialApi {
     }
 
     @Override
-    public ResponseEntity<TutorialDTO> update(TutorialDTO tutorialDTO) {
-        return new ResponseEntity<>(tutorialService.update(tutorialDTO), HttpStatus.CREATED);
+    public ResponseEntity<TutorialDTO> update(String id,TutorialDTO tutorialDTO) {
+        return new ResponseEntity<>(tutorialService.update(id,tutorialDTO), HttpStatus.CREATED);
     }
 
     @Override
@@ -68,4 +76,39 @@ public class TutorialController implements TutorialApi {
                 ? ResponseEntity.ok(true)
                 : new ResponseEntity<>(false, HttpStatus.NOT_FOUND);
     }
+
+
+
+    //************************* NUEVO CODIGO PARA SSE***************************
+    @EventListener
+    public void onNotification(Notification notification) {
+        List<SseEmitter> deadEmitters = new ArrayList<>();
+        this.emitters.forEach(emitter -> {
+            try {
+
+                emitter.send(notification);
+
+            } catch (Exception e) {
+
+                deadEmitters.add(emitter);
+            }
+        });
+        this.emitters.remove(deadEmitters);
+    }
+
+    //************************* NUEVO CODIGO PARA SSE***************************
+    @Override
+    public SseEmitter getNewNotification() {
+        SseEmitter emitter = new SseEmitter();
+        this.emitters.add(emitter);
+
+        emitter.onCompletion(() -> this.emitters.remove(emitter));
+        emitter.onTimeout(() -> {
+            emitter.complete();
+            this.emitters.remove(emitter);
+        });
+
+        return emitter;
+    }
+
 }

@@ -5,10 +5,13 @@ import com.example.tutorial.model.dto.TutorialDTO;
 import com.example.tutorial.repository.TutorialRepository;
 import com.example.tutorial.service.converter.TutorialConverterToDTO;
 import com.example.tutorial.service.converter.TutorialConverterToVO;
+import com.example.tutorial.service.impl.Notification;
 import com.example.tutorial.service.impl.TutorialService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -23,6 +26,12 @@ public class TutorialServiceImpl implements TutorialService {
     @Autowired
     private TutorialConverterToVO toVO;
 
+    public final ApplicationEventPublisher eventPublisher;
+
+    //************************* NUEVO CODIGO PARA SSE***************************
+    public TutorialServiceImpl(ApplicationEventPublisher eventPublisher) {
+        this.eventPublisher = eventPublisher;
+    }
 
     @Override
     public List<TutorialDTO> getAll() {
@@ -56,7 +65,16 @@ public class TutorialServiceImpl implements TutorialService {
      */
     @Override
     public TutorialVO create(TutorialDTO tutorialDTO) {
-        return tutorialRepository.insert(toVO.convert(tutorialDTO));
+        TutorialVO tutorialVO = tutorialRepository.insert(toVO.convert(tutorialDTO));
+
+        try {
+            publishJobNotifications();
+            return tutorialVO;
+        } catch (Exception e) {
+            return tutorialVO;
+        }
+
+
     }
 
     /**
@@ -64,8 +82,12 @@ public class TutorialServiceImpl implements TutorialService {
      * @return
      */
     @Override
-    public TutorialDTO update(TutorialDTO tutorialDTO) {
-        TutorialVO tutorialVO = toVO.convert(tutorialDTO);
+    public TutorialDTO update(String id, TutorialDTO tutorialDTO) {
+
+        Optional<TutorialVO> actual = findById(id);
+        TutorialVO tutorialVO = actual.get();
+        tutorialVO = toVO.convert(tutorialDTO);
+
         return toDTO.convert(tutorialRepository.save(tutorialVO));
     }
 
@@ -73,7 +95,6 @@ public class TutorialServiceImpl implements TutorialService {
     public boolean delete(String id) {
 
         try {
-
             tutorialRepository.deleteById(id);
             return Boolean.TRUE;
         } catch (Exception e) {
@@ -91,4 +112,17 @@ public class TutorialServiceImpl implements TutorialService {
             return Boolean.FALSE;
         }
     }
+
+    //************************* NUEVO CODIGO PARA SSE***************************
+    public void publishJobNotifications() throws InterruptedException {
+        Integer jobId = Notification.getNextJobId();
+        Notification nStarted = new Notification("Job No. " + jobId + " started.", new Date());
+
+        this.eventPublisher.publishEvent(nStarted);
+
+        //Thread.sleep(2000);
+        //Notification nFinished = new Notification("Job No. " + jobId + " finished.", new Date());
+        //this.eventPublisher.publishEvent(nFinished);
+    }
+
 }

@@ -18,7 +18,7 @@ public interface TutorialService {
 
     TutorialVO create(final TutorialDTO tutorialDTO);
 
-    TutorialDTO update(final TutorialDTO tutorialDTO);
+    TutorialDTO update(String id,final TutorialDTO tutorialDTO);
 
     boolean delete(final String id);
 
